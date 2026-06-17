@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sales Visit Cost Tracker</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Visit Cost Tracker</title>
 
-  <!--
+<!--
 ═══════════════════════════════════════════════════════════════════════════════
   SALES VISIT COST TRACKER — PHASE 1 (FRONTEND ONLY)
   ─────────────────────────────────────────────────────────────────────────────
@@ -36,262 +35,238 @@
 ═══════════════════════════════════════════════════════════════════════════════
 -->
 
-  <!-- [EDIT-2] Fonts ─────────────────────────────────────────────────────────
+<!-- [EDIT-2] Fonts ─────────────────────────────────────────────────────────
      Change here to swap typography. Sarabun handles Thai+English beautifully.
      Other good bilingual choices: Noto Sans Thai, IBM Plex Sans Thai, Prompt
 ─────────────────────────────────────────────────────────────────────────── -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
-    rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-  <header>
-    <div class="header-left">
-      <img src="logo.png" alt="Logo" class="app-logo" id="appLogo" onerror="this.style.display='none'">
-      <div class="app-title">
-        <span data-i18n="appTitle">Sales Visit Tracker</span>
-        <span class="subtitle" data-i18n="appSubtitle">Track costs from the road</span>
-      </div>
-    </div>
-    <div style="display: flex; gap: 8px;">
-      <button class="lang-toggle" id="logoutBtn" style="display:none;" data-i18n="btnSignOut">Sign Out</button>
-      <button class="lang-toggle" id="langToggle">TH / EN</button>
-    </div>
-  </header>
-
-  <main>
-
-    <!-- ═══ LOGIN SCREEN ═══ -->
-    <section class="view active" id="loginView">
-      <div class="card" style="max-width: 400px; margin: 40px auto; text-align: center;">
-        <h2 style="margin-bottom: 20px;" data-i18n="titleSignIn">Sign In</h2>
-        <div class="field-group" style="text-align: left;">
-          <label data-i18n="fieldEmpId">Employee ID</label>
-          <input type="text" id="fieldEmpId" data-i18n-attr="placeholder:phEmpId" placeholder="e.g. EMP01">
-        </div>
-        <button class="btn-primary" id="loginBtn" style="margin-top: 16px;" data-i18n="btnSignIn">Sign In</button>
-
-      </div>
-    </section>
-
-    <!-- ═══ APP CONTAINER ═══ -->
-    <div id="appContainer" style="display: none;">
-
-      <!-- ═══ SUMMARY PANEL ═══ -->
-      <div class="summary" id="summary"></div>
-
-      <!-- ═══ TABS ═══ -->
-      <div class="tabs">
-        <button class="tab active" data-view="logView" data-i18n="tabLog">Log Visit</button>
-        <button class="tab" data-view="historyView" data-i18n="tabHistory">History</button>
-      </div>
-
-      <!-- ═══════════════════════════════════════════════════════════════════
-       LOG VISIT VIEW
-       ═══════════════════════════════════════════════════════════════════ -->
-      <section class="view active" id="logView">
-        <form class="card" id="visitForm" novalidate>
-
-          <div class="log-type-selector">
-            <button type="button" class="type-btn active" id="typeVisitBtn" data-type="visit">
-              🚗 <span data-i18n="typeVisit">Visit Client</span>
-            </button>
-            <button type="button" class="type-btn" id="typeRefuelBtn" data-type="refuel">
-              ⛽ <span data-i18n="typeRefuel">Refuel Log</span>
-            </button>
-            <button type="button" class="type-btn" id="typeMealsBtn" data-type="meals">
-              🍽️ <span data-i18n="typeMeals">Meals/Entertainment</span>
-            </button>
-          </div>
-
-          <div class="form-section-label" data-i18n="sectionWho">Who & When</div>
-
-          <div class="field-row">
-            <div class="field-group">
-              <label data-i18n="fieldDate">Date <span class="required">*</span></label>
-              <div class="date-picker-wrapper">
-                <input type="text" id="fieldDate" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
-                <span class="date-icon">📅</span>
-                <div class="calendar" id="calendar"></div>
-              </div>
-            </div>
-            <div class="field-group">
-              <label data-i18n="fieldSalesRep">Sales Rep <span class="required">*</span></label>
-              <select id="fieldSalesRep"></select>
-            </div>
-          </div>
-
-          <div class="field-group visit-meals-only">
-            <label data-i18n="fieldCustomer">Customer <span class="required">*</span></label>
-            <select id="fieldCustomer"></select>
-          </div>
-
-          <hr class="divider visit-only">
-          <div class="form-section-label visit-only" data-i18n="sectionRoute">Route</div>
-
-          <div class="field-group visit-only">
-            <label data-i18n="fieldOrigin">From / Origin <span class="required">*</span></label>
-            <input type="text" id="fieldOrigin" data-i18n-attr="placeholder:phOrigin" placeholder="e.g. Bangkok Office">
-          </div>
-
-          <div class="field-group visit-only">
-            <label data-i18n="fieldDestination">To / Destination <span class="required">*</span></label>
-            <input type="text" id="fieldDestination" data-i18n-attr="placeholder:phDestination"
-              placeholder="e.g. 123 Sukhumvit Rd">
-            <button type="button" class="map-button" id="mapButton">
-              🗺️ <span data-i18n="btnViewMap">View on Google Maps</span>
-            </button>
-          </div>
-
-          <div class="field-group visit-only">
-            <label data-i18n="fieldDistance">Distance (km) <span class="required">*</span></label>
-            <input type="text" inputmode="decimal" id="fieldDistance" placeholder="0.0">
-          </div>
-
-          <hr class="divider">
-          <div class="form-section-label" data-i18n="sectionCosts">Costs (THB)</div>
-
-          <div class="field-group visit-only">
-            <label data-i18n="fieldToll">Toll Fee <span class="required">*</span></label>
-            <div class="cost-row">
-              <span class="currency-symbol">฿</span>
-              <input type="text" inputmode="decimal" id="fieldToll" placeholder="0.00" class="cost-input">
-            </div>
-          </div>
-
-          <div class="field-group visit-refuel-only">
-            <label data-i18n="fieldFuel">Fuel</label>
-            <div class="cost-row">
-              <span class="currency-symbol">฿</span>
-              <input type="text" inputmode="decimal" id="fieldFuel" placeholder="0.00" class="cost-input">
-            </div>
-          </div>
-
-          <div class="field-group visit-only">
-            <label data-i18n="fieldParking">Parking</label>
-            <div class="cost-row">
-              <span class="currency-symbol">฿</span>
-              <input type="text" inputmode="decimal" id="fieldParking" placeholder="0.00" class="cost-input">
-            </div>
-          </div>
-
-          <div class="field-group meals-only">
-            <label data-i18n="fieldMeals">Meals / Entertainment <span class="required">*</span></label>
-            <div class="cost-row">
-              <span class="currency-symbol">฿</span>
-              <input type="text" inputmode="decimal" id="fieldMeals" placeholder="0.00" class="cost-input">
-            </div>
-          </div>
-
-          <div class="field-row visit-only">
-            <div class="field-group">
-              <label data-i18n="fieldOther">Other</label>
-              <div class="cost-row">
-                <span class="currency-symbol">฿</span>
-                <input type="text" inputmode="decimal" id="fieldOther" placeholder="0.00" class="cost-input">
-              </div>
-            </div>
-            <div class="field-group">
-              <label data-i18n="fieldOtherDesc">Other description</label>
-              <input type="text" id="fieldOtherDesc" data-i18n-attr="placeholder:phOtherDesc"
-                placeholder="Purpose of visit">
-            </div>
-          </div>
-
-          <div class="total-display">
-            <span class="label" data-i18n="labelTotal">Total Cost</span>
-            <span class="amount"><span class="currency-symbol">฿</span><span id="totalDisplay">0.00</span></span>
-          </div>
-
-          <hr class="divider visit-only">
-          <div class="form-section-label visit-only" data-i18n="sectionContext">Context</div>
-
-          <div class="field-group visit-only">
-            <label data-i18n="fieldPurpose">Purpose <span class="required">*</span></label>
-            <select id="fieldPurpose"></select>
-          </div>
-
-          <div class="field-group">
-            <label data-i18n="fieldNotes">Notes</label>
-            <textarea id="fieldNotes" data-i18n-attr="placeholder:phNotes" placeholder="Optional details..."></textarea>
-          </div>
-
-          <div class="form-actions" id="formActions" style="width: 100%;">
-            <button type="submit" class="btn-primary" id="submitBtn" data-i18n="btnSave">Save Visit</button>
-          </div>
-        </form>
-      </section>
-
-      <!-- ═══════════════════════════════════════════════════════════════════
-       HISTORY VIEW
-       ═══════════════════════════════════════════════════════════════════ -->
-      <section class="view" id="historyView">
-
-        <div class="card">
-          <div class="section-title">
-            <h2 data-i18n="sectionFilters">Filters</h2>
-            <button id="exportBtn" data-i18n="btnExport">⬇ Export CSV</button>
-          </div>
-          <div class="filters">
-            <div>
-              <label data-i18n="filterFrom">From</label>
-              <div class="date-picker-wrapper">
-                <input type="text" id="filterFrom" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
-                <span class="date-icon">📅</span>
-              </div>
-            </div>
-            <div>
-              <label data-i18n="filterTo">To</label>
-              <div class="date-picker-wrapper">
-                <input type="text" id="filterTo" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
-                <span class="date-icon">📅</span>
-              </div>
-            </div>
-            <div>
-              <label data-i18n="filterRep">Sales Rep</label>
-              <select id="filterRep"></select>
-            </div>
-            <div>
-              <label data-i18n="filterCustomer">Customer</label>
-              <select id="filterCustomer"></select>
-            </div>
-          </div>
-          <div class="filter-actions">
-            <button class="btn-secondary" id="applyFilters" data-i18n="btnApplyFilters">Apply</button>
-            <button class="btn-secondary" id="clearFilters" data-i18n="btnClearFilters">Clear</button>
-          </div>
-        </div>
-
-        <div class="visit-list" id="visitList"></div>
-      </section>
-
-    </div> <!-- end appContainer -->
-
-  </main>
-
-  <!-- ═══ DELETE CONFIRMATION MODAL ═══ -->
-  <div class="modal-backdrop" id="deleteModal">
-    <div class="modal">
-      <h3 data-i18n="modalDeleteTitle">Confirm Delete</h3>
-      <p data-i18n="modalDeleteText">Enter the password to delete this visit. This cannot be undone.</p>
-      <div class="field-group">
-        <input type="password" id="deletePassword" data-i18n-attr="placeholder:phPassword" placeholder="Password">
-      </div>
-      <div class="button-row">
-        <button class="btn-secondary" id="cancelDelete" data-i18n="btnCancel">Cancel</button>
-        <button class="btn-danger" id="confirmDelete" data-i18n="btnDelete">Delete</button>
-      </div>
+<header>
+  <div class="header-left">
+    <img src="logo.png" alt="Logo" class="app-logo" id="appLogo" onerror="this.style.display='none'">
+    <div class="app-title">
+      <span data-i18n="appTitle">Sales Visit Tracker</span>
+      <span class="subtitle" data-i18n="appSubtitle">Track costs from the road</span>
     </div>
   </div>
+  <div style="display: flex; gap: 8px;">
+    <button class="lang-toggle" id="logoutBtn" style="display:none;" data-i18n="btnSignOut">Sign Out</button>
+    <button class="lang-toggle" id="langToggle">TH / EN</button>
+  </div>
+</header>
 
-  <script src="script.js"></script>
+<main>
+
+  <!-- ═══ LOGIN SCREEN ═══ -->
+  <section class="view active" id="loginView">
+    <div class="card" style="max-width: 400px; margin: 40px auto; text-align: center;">
+      <h2 style="margin-bottom: 20px;" data-i18n="titleSignIn">Sign In</h2>
+      <div class="field-group" style="text-align: left;">
+        <label data-i18n="fieldEmpId">Employee ID</label>
+        <input type="text" id="fieldEmpId" data-i18n-attr="placeholder:phEmpId" placeholder="e.g. EMP01">
+      </div>
+      <button class="btn-primary" id="loginBtn" style="margin-top: 16px;" data-i18n="btnSignIn">Sign In</button>
+    </div>
+  </section>
+
+  <!-- ═══ APP CONTAINER ═══ -->
+  <div id="appContainer" style="display: none;">
+
+  <!-- ═══ SUMMARY PANEL ═══ -->
+  <div class="summary" id="summary"></div>
+
+  <!-- ═══ TABS ═══ -->
+  <div class="tabs">
+    <button class="tab active" data-view="logView" data-i18n="tabLog">Log Visit</button>
+    <button class="tab" data-view="historyView" data-i18n="tabHistory">History</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       LOG VISIT VIEW
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="view active" id="logView">
+    <form class="card" id="visitForm" novalidate>
+
+      <div class="form-section-label" data-i18n="sectionWho">Who & When</div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <label data-i18n="fieldDate">Date <span class="required">*</span></label>
+          <div class="date-picker-wrapper">
+            <input type="text" id="fieldDate" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
+            <span class="date-icon">📅</span>
+            <div class="calendar" id="calendar"></div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label data-i18n="fieldSalesRep">Sales Rep <span class="required">*</span></label>
+          <select id="fieldSalesRep"></select>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label data-i18n="fieldCustomer">Customer <span class="required">*</span></label>
+        <select id="fieldCustomer"></select>
+      </div>
+
+      <hr class="divider">
+      <div class="form-section-label" data-i18n="sectionRoute">Route</div>
+
+      <div class="field-group">
+        <label data-i18n="fieldOrigin">From / Origin <span class="required">*</span></label>
+        <input type="text" id="fieldOrigin" data-i18n-attr="placeholder:phOrigin" placeholder="e.g. Bangkok Office">
+      </div>
+
+      <div class="field-group">
+        <label data-i18n="fieldDestination">To / Destination <span class="required">*</span></label>
+        <input type="text" id="fieldDestination" data-i18n-attr="placeholder:phDestination" placeholder="e.g. 123 Sukhumvit Rd">
+        <button type="button" class="map-button" id="mapButton">
+          🗺️ <span data-i18n="btnViewMap">View on Google Maps</span>
+        </button>
+      </div>
+
+      <div class="field-group">
+        <label data-i18n="fieldDistance">Distance (km) <span class="required">*</span></label>
+        <input type="text" inputmode="decimal" id="fieldDistance" placeholder="0.0">
+      </div>
+
+      <hr class="divider">
+      <div class="form-section-label" data-i18n="sectionCosts">Costs (THB)</div>
+
+      <div class="field-group">
+        <label data-i18n="fieldToll">Toll Fee <span class="required">*</span></label>
+        <div class="cost-row">
+          <span class="currency-symbol">฿</span>
+          <input type="text" inputmode="decimal" id="fieldToll" placeholder="0.00" class="cost-input">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <label data-i18n="fieldFuel">Fuel</label>
+          <div class="cost-row">
+            <span class="currency-symbol">฿</span>
+            <input type="text" inputmode="decimal" id="fieldFuel" placeholder="0.00" class="cost-input">
+          </div>
+        </div>
+        <div class="field-group">
+          <label data-i18n="fieldParking">Parking</label>
+          <div class="cost-row">
+            <span class="currency-symbol">฿</span>
+            <input type="text" inputmode="decimal" id="fieldParking" placeholder="0.00" class="cost-input">
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <label data-i18n="fieldOther">Other</label>
+          <div class="cost-row">
+            <span class="currency-symbol">฿</span>
+            <input type="text" inputmode="decimal" id="fieldOther" placeholder="0.00" class="cost-input">
+          </div>
+        </div>
+        <div class="field-group">
+          <label data-i18n="fieldOtherDesc">Other description</label>
+          <input type="text" id="fieldOtherDesc" data-i18n-attr="placeholder:phOtherDesc" placeholder="What was it for?">
+        </div>
+      </div>
+
+      <div class="total-display">
+        <span class="label" data-i18n="labelTotal">Total Cost</span>
+        <span class="amount"><span class="currency-symbol">฿</span><span id="totalDisplay">0.00</span></span>
+      </div>
+
+      <hr class="divider">
+      <div class="form-section-label" data-i18n="sectionContext">Context</div>
+
+      <div class="field-group">
+        <label data-i18n="fieldPurpose">Purpose <span class="required">*</span></label>
+        <select id="fieldPurpose"></select>
+      </div>
+
+      <div class="field-group">
+        <label data-i18n="fieldNotes">Notes</label>
+        <textarea id="fieldNotes" data-i18n-attr="placeholder:phNotes" placeholder="Optional details..."></textarea>
+      </div>
+
+      <button type="submit" class="btn-primary" data-i18n="btnSave">Save Visit</button>
+    </form>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HISTORY VIEW
+       ═══════════════════════════════════════════════════════════════════ -->
+  <section class="view" id="historyView">
+
+    <div class="card">
+      <div class="section-title">
+        <h2 data-i18n="sectionFilters">Filters</h2>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+          <button id="openSheetBtn" style="display:none;" data-i18n="btnOpenSheet">📊 Open Google Sheet</button>
+          <button id="syncSheetBtn" style="display:none;" data-i18n="btnSyncSheet">🔄 Sync Offline Data</button>
+          <button id="exportBtn" data-i18n="btnExport">⬇ Export CSV</button>
+        </div>
+      </div>
+      <div class="filters">
+        <div>
+          <label data-i18n="filterFrom">From</label>
+          <div class="date-picker-wrapper">
+            <input type="text" id="filterFrom" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
+            <span class="date-icon">📅</span>
+          </div>
+        </div>
+        <div>
+          <label data-i18n="filterTo">To</label>
+          <div class="date-picker-wrapper">
+            <input type="text" id="filterTo" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
+            <span class="date-icon">📅</span>
+          </div>
+        </div>
+        <div>
+          <label data-i18n="filterRep">Sales Rep</label>
+          <select id="filterRep"></select>
+        </div>
+        <div>
+          <label data-i18n="filterCustomer">Customer</label>
+          <select id="filterCustomer"></select>
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button class="btn-secondary" id="applyFilters" data-i18n="btnApplyFilters">Apply</button>
+        <button class="btn-secondary" id="clearFilters" data-i18n="btnClearFilters">Clear</button>
+      </div>
+    </div>
+
+    <div class="visit-list" id="visitList"></div>
+  </section>
+
+  </div> <!-- end appContainer -->
+
+</main>
+
+<!-- ═══ DELETE CONFIRMATION MODAL ═══ -->
+<div class="modal-backdrop" id="deleteModal">
+  <div class="modal">
+    <h3 data-i18n="modalDeleteTitle">Confirm Delete</h3>
+    <p data-i18n="modalDeleteText">Enter the password to delete this visit. This cannot be undone.</p>
+    <div class="field-group">
+      <input type="password" id="deletePassword" data-i18n-attr="placeholder:phPassword" placeholder="Password">
+    </div>
+    <div class="button-row">
+      <button class="btn-secondary" id="cancelDelete" data-i18n="btnCancel">Cancel</button>
+      <button class="btn-danger" id="confirmDelete" data-i18n="btnDelete">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
 
 </body>
-
 </html>

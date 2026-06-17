@@ -4,7 +4,7 @@
    [EDIT-3] REFERENCE LISTS — Edit dropdown options here
    ═══════════════════════════════════════════════════════════════════════ */
 const USERS = [
-  { id: 'MNG01', name: 'พี่เมย์', role: 'manager' },
+  { id: 'MGR01', name: 'Manager 1', role: 'manager' },
   { id: 'EMP01', name: 'ก้องภพ ต้นโสภา', role: 'rep' },
   { id: 'EMP02', name: 'เฉลิมชัย เบญจพัฒนมงคล', role: 'rep' },
   { id: 'EMP03', name: 'เดชา ปัญจวัฒนกุล', role: 'rep' },
@@ -15,39 +15,14 @@ const USERS = [
 
 const SALES_REPS = USERS.filter(u => u.role === 'rep').map(u => u.name);
 
-const STATIC_CUSTOMERS = [
-  'Colgate',
-  'เต่าแก่น้อย',
-  'GPO',
-  'Hafele',
-  'S&J',
+const CUSTOMERS = [
+  'ABC Co., Ltd.',
+  'XYZ Manufacturing',
+  'Global Foods Group',
+  'Gentos',
+  'PO Care',
+  // 👉 Add more customer names here
 ];
-
-let CUSTOMERS = [...STATIC_CUSTOMERS];
-
-function loadCustomCustomers(visits = []) {
-  try {
-    const raw = localStorage.getItem('custom_customers');
-
-    if (raw === null) {
-      // Very first time or cleared storage — migrate from past visits to initialize
-      let custom = [];
-      visits.forEach(v => {
-        if (v.customer && v.customer !== 'Refuel' && !STATIC_CUSTOMERS.includes(v.customer) && !custom.includes(v.customer)) {
-          custom.push(v.customer);
-        }
-      });
-      localStorage.setItem('custom_customers', JSON.stringify(custom));
-      CUSTOMERS = [...STATIC_CUSTOMERS, ...custom];
-    } else {
-      // Already initialized, load from localStorage directly
-      let custom = JSON.parse(raw);
-      CUSTOMERS = [...STATIC_CUSTOMERS, ...custom];
-    }
-  } catch (e) {
-    console.error('Failed to load custom customers', e);
-  }
-}
 
 /* Visit purposes — value stays in English (stored), label translated via translations */
 const PURPOSES = ['meeting', 'followup', 'demo', 'delivery', 'complaint', 'other'];
@@ -62,7 +37,8 @@ const SETTINGS = {
   defaultLang: 'en',             // 'en' or 'th'
   storageKey: 'sales_visits',    // LocalStorage key for visits (don't change after launch)
   prefsKey: 'sales_visits_prefs',// LocalStorage key for user preferences
-  ratePerKm: 0.0                 // 👉 Fuel cost allowance per km (e.g., 4.0). Set to 0 to disable.
+  googleSheetUrl: 'https://docs.google.com/spreadsheets/d/12F9W3h63v_tbeIjZhH9-2rNJXbk0ouAHuZ4IltBYyaU/edit?gid=0#gid=0',            // 👉 [NEW] Add your Google Sheets link here (e.g., https://docs.google.com/spreadsheets/d/...)
+  googleScriptWebappUrl: 'https://script.google.com/macros/s/AKfycbx1rqMbVD4M2E0T1bwEiKBSJNwDRKBejQJGF4DIO9NNxPX0rUZdsbQjqxndBKtk763D/exec'      // 👉 [NEW] Add your deployed Apps Script Web App URL here
 };
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -88,6 +64,7 @@ const translations = {
     labelTotal: 'Total Cost',
     btnSave: 'Save Visit', btnViewMap: 'View on Google Maps',
     btnExport: '⬇ Export CSV', btnApplyFilters: 'Apply', btnClearFilters: 'Clear',
+    btnOpenSheet: '📊 Open Google Sheet', btnSyncSheet: '🔄 Sync Offline Data',
     btnCancel: 'Cancel', btnDelete: 'Delete', btnSignIn: 'Sign In', btnSignOut: 'Sign Out',
     filterFrom: 'From', filterTo: 'To', filterRep: 'Sales Rep', filterCustomer: 'Customer',
     optAll: 'All', optChoose: '— Choose —',
@@ -106,20 +83,11 @@ const translations = {
     detailRoute: 'Route', detailDistance: 'Distance', detailPurpose: 'Purpose',
     detailNotes: 'Notes', detailRep: 'Sales rep',
     savedToast: 'Visit saved',
-    titleSignIn: 'Sign In', fieldEmpId: 'Employee ID',
-    btnEdit: 'Edit', btnUpdate: 'Update Visit', btnCancelEdit: 'Cancel',
-    updatedToast: 'Visit updated',
-    labelAllocated: 'Allocated',
-    typeVisit: 'Visit Client',
-    typeRefuel: 'Refuel Log',
-    typeMeals: 'Meals / Entertainment',
-    fieldMeals: 'Meals / Entertainment',
-    savedToast_visit: 'Visit saved',
-    savedToast_refuel: 'Refueling log saved',
-    savedToast_meals: 'Meals/entertainment saved',
-    updatedToast_visit: 'Visit updated',
-    updatedToast_refuel: 'Refueling log updated',
-    updatedToast_meals: 'Meals/entertainment updated'
+    savedAndSyncedToast: 'Visit saved & synced to Google Sheets',
+    syncSuccessToast: 'Successfully synced offline data!',
+    syncFailedToast: 'Failed to sync to Google Sheets',
+    badgeSynced: 'Synced', badgeLocal: 'Local Only',
+    titleSignIn: 'Sign In', fieldEmpId: 'Employee ID'
   },
   th: {
     appTitle: 'ระบบบันทึกค่าเยี่ยมลูกค้า',
@@ -132,14 +100,15 @@ const translations = {
     fieldOrigin: 'จุดเริ่มต้น', fieldDestination: 'จุดหมาย',
     fieldDistance: 'ระยะทาง (กม.)',
     fieldToll: 'ค่าทางด่วน', fieldFuel: 'ค่าน้ำมัน', fieldParking: 'ค่าจอดรถ',
-    fieldOther: 'อื่นๆ', fieldOtherDesc: 'ค่าใช่จ่ายอื่นๆ',
+    fieldOther: 'อื่นๆ', fieldOtherDesc: 'รายละเอียดอื่นๆ',
     fieldPurpose: 'วัตถุประสงค์', fieldNotes: 'หมายเหตุ',
     phOrigin: 'เช่น สำนักงานกรุงเทพ', phDestination: 'เช่น 123 ถ.สุขุมวิท',
-    phOtherDesc: 'ค่าใช่จ่ายอื่นๆ', phNotes: 'ค่าใช่จ่ายอื่นๆ...',
+    phOtherDesc: 'เพื่ออะไร?', phNotes: 'รายละเอียดเพิ่มเติม...',
     phPassword: 'รหัสผ่าน', phSearch: 'ค้นหา...', phEmpId: 'เช่น EMP01',
     labelTotal: 'ค่าใช้จ่ายรวม',
     btnSave: 'บันทึก', btnViewMap: 'ดูใน Google Maps',
     btnExport: '⬇ ส่งออก CSV', btnApplyFilters: 'กรอง', btnClearFilters: 'ล้าง',
+    btnOpenSheet: '📊 เปิด Google Sheets', btnSyncSheet: '🔄 ซิงค์ข้อมูลที่ค้าง',
     btnCancel: 'ยกเลิก', btnDelete: 'ลบ', btnSignIn: 'เข้าสู่ระบบ', btnSignOut: 'ออกจากระบบ',
     filterFrom: 'ตั้งแต่', filterTo: 'ถึง', filterRep: 'พนักงานขาย', filterCustomer: 'ลูกค้า',
     optAll: 'ทั้งหมด', optChoose: '— เลือก —',
@@ -158,20 +127,11 @@ const translations = {
     detailRoute: 'เส้นทาง', detailDistance: 'ระยะทาง', detailPurpose: 'วัตถุประสงค์',
     detailNotes: 'หมายเหตุ', detailRep: 'พนักงานขาย',
     savedToast: 'บันทึกแล้ว',
-    titleSignIn: 'เข้าสู่ระบบ', fieldEmpId: 'รหัสพนักงาน',
-    btnEdit: 'แก้ไข', btnUpdate: 'อัปเดตการเยี่ยม', btnCancelEdit: 'ยกเลิก',
-    updatedToast: 'อัปเดตการเยี่ยมแล้ว',
-    labelAllocated: 'เฉลี่ยตามระยะทาง',
-    typeVisit: 'เยี่ยมลูกค้า',
-    typeRefuel: 'บันทึกเติมน้ำมัน',
-    typeMeals: 'รับรองลูกค้า / ค่าอาหาร',
-    fieldMeals: 'ค่ารับรอง / อาหาร',
-    savedToast_visit: 'บันทึกการเยี่ยมแล้ว',
-    savedToast_refuel: 'บันทึกการเติมน้ำมันแล้ว',
-    savedToast_meals: 'บันทึกค่ารับรอง/อาหารแล้ว',
-    updatedToast_visit: 'อัปเดตการเยี่ยมแล้ว',
-    updatedToast_refuel: 'อัปเดตการเติมน้ำมันแล้ว',
-    updatedToast_meals: 'อัปเดตค่ารับรอง/อาหารแล้ว'
+    savedAndSyncedToast: 'บันทึกและส่งข้อมูลไป Google Sheets เรียบร้อย',
+    syncSuccessToast: 'ซิงค์ข้อมูลที่ค้างเสร็จเรียบร้อย!',
+    syncFailedToast: 'ไม่สามารถซิงค์ข้อมูลไป Google Sheets ได้',
+    badgeSynced: 'ซิงค์แล้ว', badgeLocal: 'บันทึกเฉพาะในเครื่อง',
+    titleSignIn: 'เข้าสู่ระบบ', fieldEmpId: 'รหัสพนักงาน'
   }
 };
 
@@ -183,11 +143,9 @@ const state = {
   visits: [],
   filters: { from: '', to: '', rep: '', customer: '' },
   pendingDeleteId: null,
-  editingId: null,         // Track currently edited visit ID
   calendarTarget: null,    // which input the calendar is currently bound to
   calendarMonth: new Date(),
-  currentUser: null,
-  logType: 'visit'         // 'visit' or 'refuel'
+  currentUser: null
 };
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -234,6 +192,7 @@ const visitService = {
     const newVisit = {
       ...visitData,
       id: generateId(),
+      synced: false,
       created_at: now,
       updated_at: now
     };
@@ -246,7 +205,7 @@ const visitService = {
     const all = JSON.parse(localStorage.getItem(SETTINGS.storageKey) || '[]');
     const idx = all.findIndex(v => v.id === id);
     if (idx === -1) throw new Error('Visit not found');
-    all[idx] = { ...all[idx], ...visitData, updated_at: new Date().toISOString() };
+    all[idx] = { ...all[idx], ...visitData, synced: false, updated_at: new Date().toISOString() };
     localStorage.setItem(SETTINGS.storageKey, JSON.stringify(all));
     return Promise.resolve(all[idx]);
   },
@@ -320,61 +279,6 @@ function attachDateAutoSlash(input) {
   });
 }
 
-function getLevenshteinDistance(a, b) {
-  const tmp = [];
-  let i, j, alen = a.length, blen = b.length, cost;
-  if (alen === 0) return blen;
-  if (blen === 0) return alen;
-  for (i = 0; i <= alen; i++) tmp[i] = [i];
-  for (j = 0; j <= blen; j++) tmp[0][j] = j;
-  for (i = 1; i <= alen; i++) {
-    for (j = 1; j <= blen; j++) {
-      cost = (a[i - 1] === b[j - 1]) ? 0 : 1;
-      tmp[i][j] = Math.min(tmp[i - 1][j] + 1, tmp[i][j - 1] + 1, tmp[i - 1][j - 1] + cost);
-    }
-  }
-  return tmp[alen][blen];
-}
-
-function findSimilarCustomer(typed) {
-  const tNorm = typed.replace(/\s+/g, ' ').trim().toLowerCase();
-  if (tNorm.length < 3) return null;
-
-  for (const cust of CUSTOMERS) {
-    const cNorm = cust.replace(/\s+/g, ' ').trim().toLowerCase();
-    if (cNorm === tNorm) continue;
-
-    const dist = getLevenshteinDistance(tNorm, cNorm);
-    const threshold = cNorm.length >= 5 ? 2 : 1;
-    if (dist <= threshold) {
-      return cust;
-    }
-  }
-  return null;
-}
-
-function getFuelRateForRepAndMonth(visits, salesRep, dateIso) {
-  if (!dateIso || !salesRep) return 0;
-  const monthKey = dateIso.substring(0, 7); // "yyyy-mm"
-
-  let totalFuel = 0;
-  let totalKm = 0;
-
-  visits.forEach(v => {
-    if (v.sales_rep !== salesRep) return;
-    const vMonth = v.visit_date ? v.visit_date.substring(0, 7) : '';
-    if (vMonth !== monthKey) return;
-
-    if (v.customer === 'Refuel') {
-      totalFuel += (v.costs?.fuel || 0);
-    } else {
-      totalKm += (v.distance_km || 0);
-    }
-  });
-
-  return totalKm > 0 ? (totalFuel / totalKm) : 0;
-}
-
 /* ═══════════════════════════════════════════════════════════════════════
    I18N — Apply translations to DOM
    ═══════════════════════════════════════════════════════════════════════ */
@@ -391,7 +295,6 @@ function applyI18n() {
   populateDropdowns();
   renderVisitList();
   renderSummary();
-  renderFormActions();
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -446,50 +349,8 @@ function makeSelectSearchable(selectId) {
       const li = document.createElement('li');
       li.className = 'custom-select-option';
       if (opt.selected) li.classList.add('selected');
-
-      const spanText = document.createElement('span');
-      spanText.textContent = opt.text;
-      li.appendChild(spanText);
-
+      li.textContent = opt.text;
       li.dataset.value = opt.value;
-
-      // Add delete button for custom customers (skip STATIC_CUSTOMERS and Refuel)
-      if ((selectId === 'fieldCustomer' || selectId === 'filterCustomer') &&
-        opt.value && opt.value !== 'Refuel' && !STATIC_CUSTOMERS.includes(opt.value)) {
-        const delBtn = document.createElement('span');
-        delBtn.className = 'delete-cust-btn';
-        delBtn.innerHTML = '×';
-        delBtn.title = state.lang === 'th' ? 'ลบลูกค้ารายนี้' : 'Delete this customer';
-
-        delBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const toDelete = opt.value;
-
-          const confirmText = state.lang === 'th'
-            ? `คุณต้องการลบคุณลูกค้า "${toDelete}" ใช่หรือไม่? (ชื่อนี้จะยังอยู่ในประวัติเดิม แต่จะไม่แสดงให้เลือกใหม่)`
-            : `Are you sure you want to delete customer "${toDelete}"? (It will remain in past history but won't be selectable for new logs)`;
-
-          if (confirm(confirmText)) {
-            try {
-              const raw = localStorage.getItem('custom_customers');
-              let custom = raw ? JSON.parse(raw) : [];
-              custom = custom.filter(c => c !== toDelete);
-              localStorage.setItem('custom_customers', JSON.stringify(custom));
-
-              CUSTOMERS = [...STATIC_CUSTOMERS, ...custom];
-              populateDropdowns();
-
-              if (select.value === toDelete) {
-                select.value = '';
-                select.dispatchEvent(new Event('change', { bubbles: true }));
-              }
-            } catch (err) {
-              console.error(err);
-            }
-          }
-        });
-        li.appendChild(delBtn);
-      }
 
       li.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -518,24 +379,8 @@ function makeSelectSearchable(selectId) {
   }
 
   function filterOptions(query) {
-    const cleanQuery = query.replace(/\s+/g, ' ').trim();
-    const q = cleanQuery.toLowerCase();
-
-    // Remove existing "+ Add new" option if any
-    const existingAddOpt = optionsContainer.querySelector('.add-new-option');
-    if (existingAddOpt) {
-      existingAddOpt.remove();
-    }
-
-    let exactMatchFound = false;
-
+    const q = query.toLowerCase();
     Array.from(optionsContainer.children).forEach(li => {
-      const val = li.dataset.value;
-      const normVal = val ? val.replace(/\s+/g, ' ').trim().toLowerCase() : '';
-      if (normVal === q) {
-        exactMatchFound = true;
-      }
-
       const text = li.textContent.toLowerCase();
       if (text.includes(q)) {
         li.classList.remove('hidden');
@@ -543,51 +388,6 @@ function makeSelectSearchable(selectId) {
         li.classList.add('hidden');
       }
     });
-
-    // If query is not empty, not exact match, and it's the customer field
-    if (cleanQuery && !exactMatchFound && selectId === 'fieldCustomer') {
-      const similar = findSimilarCustomer(cleanQuery);
-      const li = document.createElement('li');
-      li.className = 'custom-select-option add-new-option';
-      if (similar) {
-        li.classList.add('warning');
-      }
-
-      const addTextEn = similar
-        ? `+ Add "${cleanQuery}" (⚠️ Similar to "${similar}")`
-        : `+ Add "${cleanQuery}"`;
-      const addTextTh = similar
-        ? `+ เพิ่ม "${cleanQuery}" (⚠️ คล้ายกับ "${similar}")`
-        : `+ เพิ่ม "${cleanQuery}" เป็นลูกค้าใหม่`;
-      li.textContent = state.lang === 'th' ? addTextTh : addTextEn;
-      li.dataset.value = cleanQuery;
-
-      li.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const newVal = cleanQuery;
-
-        // Add to CUSTOMERS if not exists
-        if (!CUSTOMERS.includes(newVal)) {
-          try {
-            const raw = localStorage.getItem('custom_customers');
-            const custom = raw ? JSON.parse(raw) : [];
-            if (!custom.includes(newVal)) {
-              custom.push(newVal);
-              localStorage.setItem('custom_customers', JSON.stringify(custom));
-            }
-          } catch (err) {
-            console.error(err);
-          }
-          CUSTOMERS.push(newVal);
-          populateDropdowns();
-        }
-
-        select.value = newVal;
-        select.dispatchEvent(new Event('change', { bubbles: true }));
-        closeDropdown();
-      });
-      optionsContainer.appendChild(li);
-    }
   }
 
   trigger.addEventListener('click', (e) => {
@@ -619,19 +419,14 @@ function updateAllSearchableSelects() {
    DROPDOWN POPULATION
    ═══════════════════════════════════════════════════════════════════════ */
 function populateDropdowns() {
-  const reps = [...SALES_REPS];
-  if (state.currentUser && !reps.includes(state.currentUser.name)) {
-    reps.push(state.currentUser.name);
-  }
-
   // Sales rep dropdown (form)
-  fillSelect('fieldSalesRep', reps, false);
+  fillSelect('fieldSalesRep', SALES_REPS, false);
   fillSelect('fieldCustomer', CUSTOMERS, false);
   fillSelectWithPurposes('fieldPurpose');
 
   // Filter dropdowns — include "All" option
-  fillSelect('filterRep', reps, true);
-  fillSelect('filterCustomer', [...CUSTOMERS, 'Refuel'], true);
+  fillSelect('filterRep', SALES_REPS, true);
+  fillSelect('filterCustomer', CUSTOMERS, true);
 
   if (typeof updateAllSearchableSelects === 'function') {
     updateAllSearchableSelects();
@@ -649,11 +444,7 @@ function fillSelect(id, options, includeAll) {
     sel.innerHTML += `<option value="">${t('optChoose')}</option>`;
   }
   options.forEach(opt => {
-    let displayText = opt;
-    if (opt === 'Refuel') {
-      displayText = state.lang === 'th' ? 'เติมน้ำมัน (บันทึกค่าน้ำมันรวม)' : 'Refuel (Bulk Refueling Log)';
-    }
-    sel.innerHTML += `<option value="${opt}">${displayText}</option>`;
+    sel.innerHTML += `<option value="${opt}">${opt}</option>`;
   });
   if (current) sel.value = current;
 }
@@ -674,64 +465,11 @@ function fillSelectWithPurposes(id) {
    ═══════════════════════════════════════════════════════════════════════ */
 function readForm() {
   const dateInput = document.getElementById('fieldDate').value;
-  const isRefuel = state.logType === 'refuel';
-  const isMeals = state.logType === 'meals';
-  const customer = isRefuel ? 'Refuel' : document.getElementById('fieldCustomer').value;
-
-  if (isRefuel) {
-    return {
-      type: 'refuel',
-      visit_date: parseDateInput(dateInput),
-      visit_date_raw: dateInput,
-      sales_rep: document.getElementById('fieldSalesRep').value,
-      customer: customer,
-      origin: 'Gas Station',
-      destination: 'Refueling',
-      distance_km: 0,
-      distance_raw: '0',
-      costs: {
-        toll: 0,
-        fuel: parseNumber(document.getElementById('fieldFuel').value),
-        parking: 0,
-        meals: 0,
-        other: 0,
-        other_description: ''
-      },
-      purpose: 'other',
-      notes: document.getElementById('fieldNotes').value.trim()
-    };
-  }
-
-  if (isMeals) {
-    return {
-      type: 'meals',
-      visit_date: parseDateInput(dateInput),
-      visit_date_raw: dateInput,
-      sales_rep: document.getElementById('fieldSalesRep').value,
-      customer: customer,
-      origin: 'Restaurant/Venue',
-      destination: 'Entertainment',
-      distance_km: 0,
-      distance_raw: '0',
-      costs: {
-        toll: 0,
-        fuel: 0,
-        parking: 0,
-        meals: parseNumber(document.getElementById('fieldMeals').value),
-        other: 0,
-        other_description: ''
-      },
-      purpose: 'other',
-      notes: document.getElementById('fieldNotes').value.trim()
-    };
-  }
-
   return {
-    type: 'visit',
     visit_date: parseDateInput(dateInput),
     visit_date_raw: dateInput,
     sales_rep: document.getElementById('fieldSalesRep').value,
-    customer: customer,
+    customer: document.getElementById('fieldCustomer').value,
     origin: document.getElementById('fieldOrigin').value.trim(),
     destination: document.getElementById('fieldDestination').value.trim(),
     distance_km: parseNumber(document.getElementById('fieldDistance').value),
@@ -740,7 +478,6 @@ function readForm() {
       toll: parseNumber(document.getElementById('fieldToll').value),
       fuel: parseNumber(document.getElementById('fieldFuel').value),
       parking: parseNumber(document.getElementById('fieldParking').value),
-      meals: 0,
       other: parseNumber(document.getElementById('fieldOther').value),
       other_description: document.getElementById('fieldOtherDesc').value.trim()
     },
@@ -775,19 +512,13 @@ function validateForm(data) {
   clearInvalidStates();
   let ok = true;
 
-  const isRefuel = data.customer === 'Refuel';
-  const isMeals = data.type === 'meals';
-
   // Required text/select fields
   if (!data.visit_date) { markInvalid('fieldDate', t('errInvalidDate')); ok = false; }
   if (!data.sales_rep) { markInvalid('fieldSalesRep', t('errRequired')); ok = false; }
   if (!data.customer) { markInvalid('fieldCustomer', t('errRequired')); ok = false; }
-
-  if (!isRefuel && !isMeals) {
-    if (!data.origin) { markInvalid('fieldOrigin', t('errRequired')); ok = false; }
-    if (!data.destination) { markInvalid('fieldDestination', t('errRequired')); ok = false; }
-    if (!data.purpose) { markInvalid('fieldPurpose', t('errRequired')); ok = false; }
-  }
+  if (!data.origin) { markInvalid('fieldOrigin', t('errRequired')); ok = false; }
+  if (!data.destination) { markInvalid('fieldDestination', t('errRequired')); ok = false; }
+  if (!data.purpose) { markInvalid('fieldPurpose', t('errRequired')); ok = false; }
 
   // Future date check
   if (data.visit_date) {
@@ -800,31 +531,18 @@ function validateForm(data) {
   }
 
   // Numeric validations
-  if (!isRefuel && !isMeals) {
-    if (data.distance_raw === '' || data.distance_km < 0) {
-      markInvalid('fieldDistance', data.distance_km < 0 ? t('errNegative') : t('errRequired'));
-      ok = false;
-    }
-  }
-
-  ['Toll', 'Fuel', 'Parking', 'Meals', 'Other'].forEach(name => {
-    const id = 'field' + name;
-    const el = document.getElementById(id);
-    if (el) {
-      const val = parseNumber(el.value);
-      if (val < 0) { markInvalid(id, t('errNegative')); ok = false; }
-    }
-  });
-
-  // Toll is required for standard client visits
-  if (!isRefuel && !isMeals && document.getElementById('fieldToll').value === '') {
-    markInvalid('fieldToll', t('errRequired'));
+  if (data.distance_raw === '' || data.distance_km < 0) {
+    markInvalid('fieldDistance', data.distance_km < 0 ? t('errNegative') : t('errRequired'));
     ok = false;
   }
-
-  // Meals is required for meals type
-  if (isMeals && document.getElementById('fieldMeals').value === '') {
-    markInvalid('fieldMeals', t('errRequired'));
+  ['Toll', 'Fuel', 'Parking', 'Other'].forEach(name => {
+    const id = 'field' + name;
+    const val = parseNumber(document.getElementById(id).value);
+    if (val < 0) { markInvalid(id, t('errNegative')); ok = false; }
+  });
+  // Toll is required
+  if (document.getElementById('fieldToll').value === '') {
+    markInvalid('fieldToll', t('errRequired'));
     ok = false;
   }
 
@@ -838,15 +556,12 @@ function validateForm(data) {
 }
 
 function calculateTotal(costs) {
-  return (costs.toll || 0) + (costs.fuel || 0) + (costs.parking || 0) + (costs.meals || 0) + (costs.other || 0);
+  return (costs.toll || 0) + (costs.fuel || 0) + (costs.parking || 0) + (costs.other || 0);
 }
 
 function updateTotalDisplay() {
-  const total = ['fieldToll', 'fieldFuel', 'fieldParking', 'fieldMeals', 'fieldOther']
-    .map(id => {
-      const el = document.getElementById(id);
-      return el ? parseNumber(el.value) : 0;
-    })
+  const total = ['fieldToll', 'fieldFuel', 'fieldParking', 'fieldOther']
+    .map(id => parseNumber(document.getElementById(id).value))
     .reduce((a, b) => a + b, 0);
   document.getElementById('totalDisplay').textContent = formatMoney(total);
 }
@@ -858,7 +573,7 @@ async function handleSubmit(e) {
 
   const record = {
     visit_date: data.visit_date,
-    sales_rep: state.currentUser && (state.currentUser.role === 'rep' || state.currentUser.role === 'manager') ? state.currentUser.name : data.sales_rep,
+    sales_rep: state.currentUser && state.currentUser.role === 'rep' ? state.currentUser.name : data.sales_rep,
     customer: data.customer,
     origin: data.origin,
     destination: data.destination,
@@ -866,73 +581,36 @@ async function handleSubmit(e) {
     costs: data.costs,
     total_cost: calculateTotal(data.costs),
     purpose: data.purpose,
-    notes: data.notes,
-    type: data.type
+    notes: data.notes
   };
 
-  const type = record.type || 'visit';
-  if (state.editingId) {
-    await visitService.update(state.editingId, record);
-    state.editingId = null;
-    showToast(t('updatedToast_' + type) || t('updatedToast') || 'Record updated');
-  } else {
-    await visitService.create(record);
-    showToast(t('savedToast_' + type) || t('savedToast') || 'Record saved');
-  }
-
+  await visitService.create(record);
   await refreshState();
   resetForm();
 
   // Remember sales rep for next time
   savePref('lastRep', data.sales_rep);
-}
 
-function updateLogTypeUI() {
-  const type = state.logType || 'visit';
-  const visitBtn = document.getElementById('typeVisitBtn');
-  const refuelBtn = document.getElementById('typeRefuelBtn');
-  const mealsBtn = document.getElementById('typeMealsBtn');
+  // Switch to history view to show the new entry
+  showToast(t('savedToast'));
 
-  if (visitBtn) {
-    if (type === 'visit') visitBtn.classList.add('active');
-    else visitBtn.classList.remove('active');
+  // Background Google Sheets sync attempt
+  if (SETTINGS.googleScriptWebappUrl) {
+    syncVisitsToGoogleSheets().then(res => {
+      if (res && res.successCount > 0) {
+        showToast(t('savedAndSyncedToast'));
+      }
+    }).catch(err => console.error('Auto sync error:', err));
   }
-  if (refuelBtn) {
-    if (type === 'refuel') refuelBtn.classList.add('active');
-    else refuelBtn.classList.remove('active');
-  }
-  if (mealsBtn) {
-    if (type === 'meals') mealsBtn.classList.add('active');
-    else mealsBtn.classList.remove('active');
-  }
-
-  document.querySelectorAll('.visit-only').forEach(el => {
-    el.style.display = type === 'visit' ? '' : 'none';
-  });
-  document.querySelectorAll('.refuel-only').forEach(el => {
-    el.style.display = type === 'refuel' ? '' : 'none';
-  });
-  document.querySelectorAll('.meals-only').forEach(el => {
-    el.style.display = type === 'meals' ? '' : 'none';
-  });
-  document.querySelectorAll('.visit-meals-only').forEach(el => {
-    el.style.display = (type === 'visit' || type === 'meals') ? '' : 'none';
-  });
-  document.querySelectorAll('.visit-refuel-only').forEach(el => {
-    el.style.display = (type === 'visit' || type === 'refuel') ? '' : 'none';
-  });
 }
 
 function resetForm() {
-  state.editingId = null; // Reset editing state
-  state.logType = 'visit';
-  updateLogTypeUI();
   document.getElementById('visitForm').reset();
   clearInvalidStates();
   // Pre-fill date with today and last-used sales rep
   document.getElementById('fieldDate').value = formatDateDisplay(todayIso());
 
-  if (state.currentUser && (state.currentUser.role === 'rep' || state.currentUser.role === 'manager')) {
+  if (state.currentUser && state.currentUser.role === 'rep') {
     document.getElementById('fieldSalesRep').value = state.currentUser.name;
   } else {
     const lastRep = loadPref('lastRep');
@@ -945,81 +623,6 @@ function resetForm() {
   if (typeof updateAllSearchableSelects === 'function') {
     updateAllSearchableSelects();
   }
-
-  renderFormActions(); // Ensure form buttons reset
-}
-
-function renderFormActions() {
-  const container = document.getElementById('formActions');
-  if (!container) return;
-
-  if (state.editingId) {
-    container.innerHTML = `
-      <div style="display: flex; gap: 12px; width: 100%;">
-        <button type="button" class="btn-secondary" id="cancelEditBtn" style="flex: 1;">${t('btnCancelEdit') || 'Cancel'}</button>
-        <button type="submit" class="btn-primary" id="submitBtn" style="flex: 1;">${t('btnUpdate') || 'Update Visit'}</button>
-      </div>
-    `;
-    document.getElementById('cancelEditBtn').addEventListener('click', cancelEdit);
-  } else {
-    container.innerHTML = `
-      <button type="submit" class="btn-primary" id="submitBtn" data-i18n="btnSave">${t('btnSave') || 'Save Visit'}</button>
-    `;
-  }
-}
-
-window.editVisit = async function (id) {
-  try {
-    const v = await visitService.getById(id);
-    if (!v) return;
-
-    state.editingId = id;
-    state.logType = v.type || ((v.customer === 'Refuel') ? 'refuel' : 'visit');
-    updateLogTypeUI();
-
-    // Populate form fields
-    document.getElementById('fieldDate').value = formatDateDisplay(v.visit_date);
-    document.getElementById('fieldSalesRep').value = v.sales_rep;
-    if (v.customer !== 'Refuel') {
-      document.getElementById('fieldCustomer').value = v.customer;
-    } else {
-      document.getElementById('fieldCustomer').value = '';
-    }
-    document.getElementById('fieldOrigin').value = v.origin || '';
-    document.getElementById('fieldDestination').value = v.destination || '';
-    document.getElementById('fieldDistance').value = v.distance_km || '0';
-
-    const c = v.costs || {};
-    document.getElementById('fieldToll').value = c.toll || '0';
-    document.getElementById('fieldFuel').value = c.fuel || '0';
-    document.getElementById('fieldParking').value = c.parking || '0';
-    document.getElementById('fieldMeals').value = c.meals || '0';
-    document.getElementById('fieldOther').value = c.other || '0';
-    document.getElementById('fieldOtherDesc').value = c.other_description || '';
-
-    document.getElementById('fieldPurpose').value = v.purpose || '';
-    document.getElementById('fieldNotes').value = v.notes || '';
-
-    // Refresh UI states
-    updateTotalDisplay();
-    if (typeof updateAllSearchableSelects === 'function') {
-      updateAllSearchableSelects();
-    }
-
-    renderFormActions();
-
-    // Switch to form tab
-    const logTab = document.querySelector('.tab[data-view="logView"]');
-    if (logTab) {
-      logTab.click();
-    }
-  } catch (err) {
-    console.error('Failed to load visit details for editing', err);
-  }
-};
-
-function cancelEdit() {
-  resetForm();
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -1038,17 +641,11 @@ function renderSummary() {
 
   const monthTotal = thisMonth.reduce((sum, v) => sum + (v.total_cost || 0), 0);
   const weekTotal = thisWeek.reduce((sum, v) => sum + (v.total_cost || 0), 0);
-
-  // Filter out Refuel logs and Meals for client visits count and top customer
-  const clientVisitsThisMonth = thisMonth.filter(v => {
-    const type = v.type || (v.customer === 'Refuel' ? 'refuel' : 'visit');
-    return type === 'visit';
-  });
-  const visitCount = clientVisitsThisMonth.length;
+  const visitCount = thisMonth.length;
 
   // Top customer this month (most visits)
   const customerCounts = {};
-  clientVisitsThisMonth.forEach(v => { customerCounts[v.customer] = (customerCounts[v.customer] || 0) + 1; });
+  thisMonth.forEach(v => { customerCounts[v.customer] = (customerCounts[v.customer] || 0) + 1; });
   const topCustomer = Object.entries(customerCounts).sort((a, b) => b[1] - a[1])[0];
 
   const html = `
@@ -1095,50 +692,19 @@ function renderVisitList() {
 
 function renderVisitCard(v) {
   const c = v.costs || {};
-  const type = v.type || (v.customer === 'Refuel' ? 'refuel' : 'visit');
-  const isRefuel = type === 'refuel';
-  const isMeals = type === 'meals';
-
-  let fuelCost = c.fuel || 0;
-  let totalCost = v.total_cost;
-  let allocatedText = '';
-
-  if (isRefuel) {
-    totalCost = fuelCost;
-  } else if (isMeals) {
-    totalCost = c.meals || 0;
-  } else {
-    const rate = getFuelRateForRepAndMonth(state.visits, v.sales_rep, v.visit_date);
-    const allocatedFuel = (v.distance_km || 0) * rate;
-    fuelCost = allocatedFuel;
-    totalCost = (c.toll || 0) + (c.parking || 0) + (c.other || 0) + allocatedFuel;
-    if (rate > 0) {
-      allocatedText = ` (${t('labelAllocated') || 'Allocated'})`;
-    }
-  }
-
-  let customerDisplay = '';
-  if (isRefuel) {
-    customerDisplay = (state.lang === 'th' ? '⛽ บันทึกเติมน้ำมัน' : '⛽ Refuel Log');
-  } else if (isMeals) {
-    customerDisplay = `🍽️ ${escapeHtml(v.customer)} (${state.lang === 'th' ? 'รับรองลูกค้า' : 'Entertainment'})`;
-  } else {
-    customerDisplay = escapeHtml(v.customer);
-  }
-
-  let borderLeftStyle = '';
-  if (isRefuel) {
-    borderLeftStyle = 'style="border-left: 4px solid var(--color-success);"';
-  } else if (isMeals) {
-    borderLeftStyle = 'style="border-left: 4px solid var(--color-accent);"';
-  }
+  const isWebappConfigured = !!SETTINGS.googleScriptWebappUrl;
+  const syncBadge = isWebappConfigured
+    ? (v.synced
+      ? `<span class="sync-badge synced"><span class="badge-icon">✓</span> <span class="badge-text" data-i18n="badgeSynced">${t('badgeSynced')}</span></span>`
+      : `<span class="sync-badge local"><span class="badge-icon">☁</span> <span class="badge-text" data-i18n="badgeLocal">${t('badgeLocal')}</span></span>`)
+    : '';
 
   return `
     <div class="visit-card" data-id="${v.id}">
-      <div class="visit-header" onclick="toggleCard('${v.id}')" ${borderLeftStyle}>
+      <div class="visit-header" onclick="toggleCard('${v.id}')">
         <div class="visit-date">${formatDateDisplay(v.visit_date)}</div>
-        <div class="visit-customer">${customerDisplay}</div>
-        <div class="visit-amount">฿${formatMoney(totalCost)}</div>
+        <div class="visit-customer">${escapeHtml(v.customer)} ${syncBadge}</div>
+        <div class="visit-amount">฿${formatMoney(v.total_cost)}</div>
       </div>
       <div class="visit-details">
         <div class="visit-details-inner">
@@ -1146,7 +712,6 @@ function renderVisitCard(v) {
             <span class="label">${t('detailRep')}</span>
             <span class="value">${escapeHtml(v.sales_rep)}</span>
           </div>
-          ${(!isRefuel && !isMeals) ? `
           <div class="detail-row">
             <span class="label">${t('detailRoute')}</span>
             <span class="value">${escapeHtml(v.origin)} → ${escapeHtml(v.destination)}</span>
@@ -1159,35 +724,23 @@ function renderVisitCard(v) {
             <span class="label">${t('detailPurpose')}</span>
             <span class="value">${t('purpose_' + v.purpose)}</span>
           </div>
-          ` : ''}
           ${v.notes ? `
-          <div class="detail-row">
-            <span class="label">${t('detailNotes')}</span>
-            <span class="value">${escapeHtml(v.notes)}</span>
-          </div>` : ''}
+            <div class="detail-row">
+              <span class="label">${t('detailNotes')}</span>
+              <span class="value">${escapeHtml(v.notes)}</span>
+            </div>` : ''}
 
           <div class="cost-breakdown">
-            ${(!isRefuel && !isMeals) ? `
             <div class="row"><span>${t('fieldToll')}</span><span>฿${formatMoney(c.toll || 0)}</span></div>
-            <div class="row"><span>${t('fieldFuel')}${allocatedText}</span><span>฿${formatMoney(fuelCost)}</span></div>
+            ${c.fuel ? `<div class="row"><span>${t('fieldFuel')}</span><span>฿${formatMoney(c.fuel)}</span></div>` : ''}
             ${c.parking ? `<div class="row"><span>${t('fieldParking')}</span><span>฿${formatMoney(c.parking)}</span></div>` : ''}
             ${c.other ? `<div class="row"><span>${t('fieldOther')}${c.other_description ? ` (${escapeHtml(c.other_description)})` : ''}</span><span>฿${formatMoney(c.other)}</span></div>` : ''}
-            ` : isRefuel ? `
-            <div class="row"><span>${t('fieldFuel')} (Refuel Amount)</span><span>฿${formatMoney(fuelCost)}</span></div>
-            ` : `
-            <div class="row"><span>${t('fieldMeals')}</span><span>฿${formatMoney(c.meals || 0)}</span></div>
-            `}
-            <div class="row total"><span>${t('labelTotal')}</span><span>฿${formatMoney(totalCost)}</span></div>
+            <div class="row total"><span>${t('labelTotal')}</span><span>฿${formatMoney(v.total_cost)}</span></div>
           </div>
 
-          <div style="display: flex; gap: 8px; margin-top: 8px;">
-            <button class="btn-secondary" onclick="editVisit('${v.id}')" style="flex: 1; min-height: 38px; padding: 8px; font-size: 0.85rem;">
-              ✏️ ${t('btnEdit')}
-            </button>
-            <button class="btn-danger" onclick="requestDelete('${v.id}')" style="flex: 1; min-height: 38px; padding: 8px; font-size: 0.85rem;">
-              🗑 ${t('btnDelete')}
-            </button>
-          </div>
+          <button class="btn-danger" onclick="requestDelete('${v.id}')" style="margin-top: 8px;">
+            🗑 ${t('btnDelete')}
+          </button>
         </div>
       </div>
     </div>
@@ -1368,41 +921,19 @@ function exportCsv() {
     .filter(v => !state.filters.customer || v.customer === state.filters.customer);
 
   const headers = [
-    'id', 'type', 'visit_date', 'sales_rep', 'customer',
+    'id', 'visit_date', 'sales_rep', 'customer',
     'origin', 'destination', 'distance_km',
-    'toll', 'fuel', 'parking', 'meals', 'other', 'other_description',
+    'toll', 'fuel', 'parking', 'other', 'other_description',
     'total_cost', 'purpose', 'notes', 'created_at'
   ];
 
-  const rows = filtered.map(v => {
-    const type = v.type || (v.customer === 'Refuel' ? 'refuel' : 'visit');
-    let fuel = v.costs?.fuel || 0;
-    let meals = v.costs?.meals || 0;
-    let total = v.total_cost;
-
-    if (type === 'visit') {
-      const rate = getFuelRateForRepAndMonth(state.visits, v.sales_rep, v.visit_date);
-      fuel = (v.distance_km || 0) * rate;
-      total = (v.costs?.toll || 0) + (v.costs?.parking || 0) + (v.costs?.other || 0) + fuel;
-    } else if (type === 'refuel') {
-      total = fuel;
-    } else if (type === 'meals') {
-      total = meals;
-    }
-
-    return [
-      v.id, type, v.visit_date, v.sales_rep, v.customer,
-      v.origin, v.destination, v.distance_km,
-      v.costs?.toll || 0,
-      Number(fuel.toFixed(2)),
-      v.costs?.parking || 0,
-      Number(meals.toFixed(2)),
-      v.costs?.other || 0,
-      v.costs?.other_description || '',
-      Number(total.toFixed(2)),
-      v.purpose, v.notes, v.created_at
-    ];
-  });
+  const rows = filtered.map(v => [
+    v.id, v.visit_date, v.sales_rep, v.customer,
+    v.origin, v.destination, v.distance_km,
+    v.costs?.toll || 0, v.costs?.fuel || 0, v.costs?.parking || 0,
+    v.costs?.other || 0, v.costs?.other_description || '',
+    v.total_cost, v.purpose, v.notes, v.created_at
+  ]);
 
   // Escape: wrap in quotes if value contains comma/quote/newline; double quotes inside
   const escapeCsv = (val) => {
@@ -1509,49 +1040,32 @@ function handleLogout() {
 
 function applyRoleRestrictions() {
   const isRep = state.currentUser && state.currentUser.role === 'rep';
-  const isManager = state.currentUser && state.currentUser.role === 'manager';
 
-  // Re-populate dropdowns first to ensure the logged-in user name exists as an option
-  populateDropdowns();
+  const repDropdowns = ['fieldSalesRep', 'filterRep'];
+  repDropdowns.forEach(id => {
+    const select = document.getElementById(id);
+    if (!select) return;
 
-  // Form sales rep field is locked for both Rep and Manager
-  const formRepSelect = document.getElementById('fieldSalesRep');
-  if (formRepSelect) {
-    if (isRep || isManager) {
-      formRepSelect.value = state.currentUser.name;
-      formRepSelect.disabled = true;
-      setSelectTriggerDisabled(formRepSelect, true);
-    } else {
-      formRepSelect.disabled = false;
-      setSelectTriggerDisabled(formRepSelect, false);
-    }
-  }
-
-  // Filter rep field is locked ONLY for Rep (Manager can search and filter other reps)
-  const filterRepSelect = document.getElementById('filterRep');
-  if (filterRepSelect) {
     if (isRep) {
-      filterRepSelect.value = state.currentUser.name;
-      filterRepSelect.disabled = true;
-      setSelectTriggerDisabled(filterRepSelect, true);
+      select.value = state.currentUser.name;
+      select.disabled = true;
+      if (select.parentElement && select.parentElement.classList.contains('custom-select-wrapper')) {
+        const trigger = select.parentElement.querySelector('.custom-select-trigger');
+        if (trigger) trigger.style.pointerEvents = 'none';
+        if (trigger) trigger.style.opacity = '0.6';
+      }
     } else {
-      filterRepSelect.disabled = false;
-      setSelectTriggerDisabled(filterRepSelect, false);
+      select.disabled = false;
+      if (select.parentElement && select.parentElement.classList.contains('custom-select-wrapper')) {
+        const trigger = select.parentElement.querySelector('.custom-select-trigger');
+        if (trigger) trigger.style.pointerEvents = 'auto';
+        if (trigger) trigger.style.opacity = '1';
+      }
     }
-  }
+  });
 
   if (typeof updateAllSearchableSelects === 'function') {
     updateAllSearchableSelects();
-  }
-}
-
-function setSelectTriggerDisabled(select, disabled) {
-  if (select.parentElement && select.parentElement.classList.contains('custom-select-wrapper')) {
-    const trigger = select.parentElement.querySelector('.custom-select-trigger');
-    if (trigger) {
-      trigger.style.pointerEvents = disabled ? 'none' : 'auto';
-      trigger.style.opacity = disabled ? '0.6' : '1';
-    }
   }
 }
 
@@ -1562,9 +1076,144 @@ async function refreshState() {
   state.visits = await visitService.getAll();
   renderSummary();
   renderVisitList();
+  updateSyncButtonVisibility();
 }
 
-// Sample data seeder removed for production.
+/* ═══════════════════════════════════════════════════════════════════════
+   GOOGLE SHEETS SYNC SYSTEM
+   ═══════════════════════════════════════════════════════════════════════ */
+async function syncVisitsToGoogleSheets() {
+  if (!SETTINGS.googleScriptWebappUrl) return;
+
+  const raw = localStorage.getItem(SETTINGS.storageKey);
+  if (!raw) return;
+  const all = JSON.parse(raw);
+  const unsynced = all.filter(v => !v.synced);
+  if (unsynced.length === 0) return;
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const visit of unsynced) {
+    try {
+      await fetch(SETTINGS.googleScriptWebappUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(visit)
+      });
+      
+      // With no-cors, the request completes successfully if network is available.
+      // We flag it as synced.
+      visit.synced = true;
+      successCount++;
+    } catch (err) {
+      console.error('[Google Sheets Sync Error] ID:', visit.id, err);
+      failCount++;
+    }
+  }
+
+  if (successCount > 0) {
+    localStorage.setItem(SETTINGS.storageKey, JSON.stringify(all));
+    await refreshState();
+  }
+
+  return { successCount, failCount };
+}
+
+function updateSyncButtonVisibility() {
+  const syncBtn = document.getElementById('syncSheetBtn');
+  if (!syncBtn) return;
+
+  if (!SETTINGS.googleScriptWebappUrl) {
+    syncBtn.style.display = 'none';
+    return;
+  }
+
+  const raw = localStorage.getItem(SETTINGS.storageKey);
+  const visits = raw ? JSON.parse(raw) : [];
+
+  // Filter unsynced based on current view/role constraints (stored in state.visits)
+  const unsyncedCount = state.visits.filter(v => !v.synced).length;
+
+  if (unsyncedCount > 0) {
+    syncBtn.style.display = 'inline-block';
+    syncBtn.textContent = `${t('btnSyncSheet')} (${unsyncedCount})`;
+  } else {
+    syncBtn.style.display = 'none';
+  }
+}
+
+async function triggerManualSync() {
+  const syncBtn = document.getElementById('syncSheetBtn');
+  if (!syncBtn) return;
+
+  syncBtn.disabled = true;
+  const originalText = syncBtn.textContent;
+  syncBtn.textContent = state.lang === 'th' ? 'กำลังซิงค์...' : 'Syncing...';
+
+  try {
+    const res = await syncVisitsToGoogleSheets();
+    if (res && res.successCount > 0) {
+      showToast(t('syncSuccessToast'));
+    } else if (res && res.failCount > 0) {
+      showToast(t('syncFailedToast'));
+    }
+  } catch (err) {
+    showToast(t('syncFailedToast'));
+  } finally {
+    syncBtn.textContent = originalText;
+    syncBtn.disabled = false;
+    updateSyncButtonVisibility();
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   [SEED-DATA] SAMPLE DATA — Delete this function call in init() when going live
+   ═══════════════════════════════════════════════════════════════════════ */
+function seedIfEmpty() {
+  const existing = localStorage.getItem(SETTINGS.storageKey);
+  if (existing && JSON.parse(existing).length > 0) return;
+
+  const today = new Date();
+  const ago = (days) => {
+    const d = new Date(today); d.setDate(d.getDate() - days);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  const samples = [
+    {
+      id: generateId(), visit_date: ago(1),
+      sales_rep: 'ก้องภพ ต้นโสภา', customer: 'ABC Co., Ltd.',
+      origin: 'Bangkok Office', destination: 'Rama 9, Bangkok',
+      distance_km: 18, costs: { toll: 80, fuel: 150, parking: 40, other: 0, other_description: '' },
+      total_cost: 270, purpose: 'meeting', notes: 'Sample data for EMP01',
+      synced: true,
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString()
+    },
+    {
+      id: generateId(), visit_date: ago(3),
+      sales_rep: 'ก้องภพ ต้นโสภา', customer: 'XYZ Manufacturing',
+      origin: 'Bangkok Office', destination: 'Bang Na Industrial Estate',
+      distance_km: 32, costs: { toll: 120, fuel: 280, parking: 0, other: 60, other_description: 'Coffee with client' },
+      total_cost: 460, purpose: 'demo', notes: 'Sample data for EMP01',
+      synced: true,
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString()
+    },
+    {
+      id: generateId(), visit_date: ago(7),
+      sales_rep: 'เฉลิมชัย เบญจพัฒนมงคล', customer: 'Global Foods Group',
+      origin: 'Bangkok Office', destination: 'Ayutthaya',
+      distance_km: 84, costs: { toll: 220, fuel: 580, parking: 30, other: 0, other_description: '' },
+      total_cost: 830, purpose: 'followup', notes: 'Sample data for EMP02',
+      synced: true,
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString()
+    }
+  ];
+  localStorage.setItem(SETTINGS.storageKey, JSON.stringify(samples));
+}
 
 /* ═══════════════════════════════════════════════════════════════════════
    INITIALIZATION
@@ -1574,25 +1223,11 @@ async function init() {
   const savedLang = loadPref('lang');
   if (savedLang) state.lang = savedLang;
 
-  // 2. Clear out any remaining sample data from localStorage for production
-  try {
-    let visits = JSON.parse(localStorage.getItem(SETTINGS.storageKey) || '[]');
-    const filtered = visits.filter(v => !v.notes || !v.notes.includes('Sample data for'));
-    if (visits.length !== filtered.length) {
-      localStorage.setItem(SETTINGS.storageKey, JSON.stringify(filtered));
-    }
-  } catch (err) {
-    console.error('Failed to clear seed data', err);
-  }
-
-  // Load visits to migrate and initialize custom customers
-  const initialVisits = await visitService.getAll();
-  loadCustomCustomers(initialVisits);
+  // 2. [SEED-DATA] Delete this line when going live
+  seedIfEmpty();
 
   // 3. Populate dropdowns and apply translations
-  state.logType = 'visit';
   applyI18n();
-  updateLogTypeUI();
 
   // 3.5 Make dropdowns searchable
   ['fieldSalesRep', 'fieldCustomer', 'fieldPurpose', 'filterRep', 'filterCustomer'].forEach(makeSelectSearchable);
@@ -1637,54 +1272,6 @@ async function init() {
     input.addEventListener('input', updateTotalDisplay);
   });
 
-  // Auto-calculate fuel cost if ratePerKm is active
-  document.getElementById('fieldDistance').addEventListener('input', (e) => {
-    if (SETTINGS.ratePerKm > 0) {
-      const dist = parseNumber(e.target.value);
-      const fuel = dist * SETTINGS.ratePerKm;
-      document.getElementById('fieldFuel').value = fuel > 0 ? fuel.toFixed(2) : '';
-      updateTotalDisplay();
-    }
-  });
-
-  // Log Type Selector Buttons
-  const typeVisitBtn = document.getElementById('typeVisitBtn');
-  const typeRefuelBtn = document.getElementById('typeRefuelBtn');
-  const typeMealsBtn = document.getElementById('typeMealsBtn');
-  if (typeVisitBtn && typeRefuelBtn && typeMealsBtn) {
-    typeVisitBtn.addEventListener('click', () => {
-      state.logType = 'visit';
-      updateLogTypeUI();
-      updateTotalDisplay();
-    });
-    typeRefuelBtn.addEventListener('click', () => {
-      state.logType = 'refuel';
-      updateLogTypeUI();
-      // Zero out non-refuel cost fields in input
-      document.getElementById('fieldDistance').value = '0';
-      document.getElementById('fieldToll').value = '0';
-      document.getElementById('fieldParking').value = '0';
-      document.getElementById('fieldMeals').value = '0';
-      document.getElementById('fieldOther').value = '0';
-      document.getElementById('fieldOtherDesc').value = '';
-      document.getElementById('fieldFuel').focus();
-      updateTotalDisplay();
-    });
-    typeMealsBtn.addEventListener('click', () => {
-      state.logType = 'meals';
-      updateLogTypeUI();
-      // Zero out non-meal cost fields in input
-      document.getElementById('fieldDistance').value = '0';
-      document.getElementById('fieldToll').value = '0';
-      document.getElementById('fieldParking').value = '0';
-      document.getElementById('fieldFuel').value = '0';
-      document.getElementById('fieldOther').value = '0';
-      document.getElementById('fieldOtherDesc').value = '';
-      document.getElementById('fieldMeals').focus();
-      updateTotalDisplay();
-    });
-  }
-
   // 10. Language toggle
   document.getElementById('langToggle').addEventListener('click', () => {
     state.lang = state.lang === 'en' ? 'th' : 'en';
@@ -1713,8 +1300,25 @@ async function init() {
     renderVisitList();
   });
 
-  // 13. CSV export
+  // 13. CSV export & Google Sheets
   document.getElementById('exportBtn').addEventListener('click', exportCsv);
+
+  const openSheetBtn = document.getElementById('openSheetBtn');
+  if (openSheetBtn) {
+    if (SETTINGS.googleSheetUrl) {
+      openSheetBtn.style.display = 'inline-block';
+      openSheetBtn.addEventListener('click', () => {
+        window.open(SETTINGS.googleSheetUrl, '_blank');
+      });
+    } else {
+      openSheetBtn.style.display = 'none';
+    }
+  }
+
+  const syncSheetBtn = document.getElementById('syncSheetBtn');
+  if (syncSheetBtn) {
+    syncSheetBtn.addEventListener('click', triggerManualSync);
+  }
 
   // 14. Delete modal
   document.getElementById('confirmDelete').addEventListener('click', confirmDelete);
@@ -1729,6 +1333,7 @@ async function init() {
   // 16. Auth setup
   document.getElementById('loginBtn').addEventListener('click', handleLogin);
   document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+
   const savedUser = loadPref('currentUser');
   if (savedUser) {
     state.currentUser = savedUser;
@@ -1743,4 +1348,5 @@ async function init() {
     document.getElementById('logoutBtn').style.display = 'none';
   }
 }
+
 document.addEventListener('DOMContentLoaded', init);
