@@ -1,272 +1,217 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sales Visit Cost Tracker</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Flatpickr for Date Formatting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
-<!--
-═══════════════════════════════════════════════════════════════════════════════
-  SALES VISIT COST TRACKER — PHASE 1 (FRONTEND ONLY)
-  ─────────────────────────────────────────────────────────────────────────────
-  📂 HOW THIS PROJECT IS ORGANIZED
-  The project is split into 3 files: index.html, style.css, and script.js.
-  Look in the respective files for these edit markers:
-
-    [EDIT-1] Theme colors          → style.css (CSS variables)
-    [EDIT-2] Fonts                 → index.html (Google Fonts link)
-    [EDIT-3] Reference lists       → script.js (Sales reps, customers)
-    [EDIT-4] Translations          → script.js (Thai / English labels)
-    [EDIT-5] Settings              → script.js (Passwords, max future date)
-    [SWAP-POINT] Data service      → script.js (Backend integration)
-    [SEED-DATA] Sample data        → script.js (Delete when going live)
-
-  📦 ARCHITECTURE
-  - Split into 3 files: HTML layout, CSS styles, JS logic.
-  - All data ops go through `visitService` in script.js.
-  - Phase 1 = LocalStorage. Phase 2 = swap to fetch() calls.
-
-  📐 SCHEMA — each visit record:
-  {
-    id, visit_date, sales_rep, customer, origin, destination,
-    distance_km, costs: { toll, fuel, parking, other, other_description },
-    total_cost, purpose, notes, created_at, updated_at
-  }
-═══════════════════════════════════════════════════════════════════════════════
--->
-
-<!-- [EDIT-2] Fonts ─────────────────────────────────────────────────────────
-     Change here to swap typography. Sarabun handles Thai+English beautifully.
-     Other good bilingual choices: Noto Sans Thai, IBM Plex Sans Thai, Prompt
-─────────────────────────────────────────────────────────────────────────── -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-
-<link rel="stylesheet" href="style.css">
+    <!-- Fuse.js for Fuzzy Search -->
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
 </head>
 <body>
-
-<header>
-  <div class="header-left">
-    <img src="logo.png" alt="Logo" class="app-logo" id="appLogo" onerror="this.style.display='none'">
-    <div class="app-title">
-      <span data-i18n="appTitle">Sales Visit Tracker</span>
-      <span class="subtitle" data-i18n="appSubtitle">Track costs from the road</span>
-    </div>
-  </div>
-  <div style="display: flex; gap: 8px;">
-    <button class="lang-toggle" id="logoutBtn" style="display:none;" data-i18n="btnSignOut">Sign Out</button>
-    <button class="lang-toggle" id="langToggle">TH / EN</button>
-  </div>
-</header>
-
-<main>
-
-  <!-- ═══ LOGIN SCREEN ═══ -->
-  <section class="view active" id="loginView">
-    <div class="card" style="max-width: 400px; margin: 40px auto; text-align: center;">
-      <h2 style="margin-bottom: 20px;" data-i18n="titleSignIn">Sign In</h2>
-      <div class="field-group" style="text-align: left;">
-        <label data-i18n="fieldEmpId">Employee ID</label>
-        <input type="text" id="fieldEmpId" data-i18n-attr="placeholder:phEmpId" placeholder="e.g. EMP01">
-      </div>
-      <button class="btn-primary" id="loginBtn" style="margin-top: 16px;" data-i18n="btnSignIn">Sign In</button>
-    </div>
-  </section>
-
-  <!-- ═══ APP CONTAINER ═══ -->
-  <div id="appContainer" style="display: none;">
-
-  <!-- ═══ SUMMARY PANEL ═══ -->
-  <div class="summary" id="summary"></div>
-
-  <!-- ═══ TABS ═══ -->
-  <div class="tabs">
-    <button class="tab active" data-view="logView" data-i18n="tabLog">Log Visit</button>
-    <button class="tab" data-view="historyView" data-i18n="tabHistory">History</button>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════════════════════
-       LOG VISIT VIEW
-       ═══════════════════════════════════════════════════════════════════ -->
-  <section class="view active" id="logView">
-    <form class="card" id="visitForm" novalidate>
-
-      <div class="form-section-label" data-i18n="sectionWho">Who & When</div>
-
-      <div class="field-row">
-        <div class="field-group">
-          <label data-i18n="fieldDate">Date <span class="required">*</span></label>
-          <div class="date-picker-wrapper">
-            <input type="text" id="fieldDate" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
-            <span class="date-icon">📅</span>
-            <div class="calendar" id="calendar"></div>
-          </div>
+    <div class="glass-container large-container">
+        
+        <div class="header-section">
+            <div class="title-area">
+                <h1>Transactions</h1>
+                <p class="subtitle">Manage your expenses and incomes seamlessly.</p>
+            </div>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="add-tab">Add Transaction</button>
+                <button class="tab-btn" data-tab="history-tab">History</button>
+            </div>
         </div>
-        <div class="field-group">
-          <label data-i18n="fieldSalesRep">Sales Rep <span class="required">*</span></label>
-          <select id="fieldSalesRep"></select>
+        
+        <!-- Add Transaction Tab -->
+        <div id="add-tab" class="tab-content active">
+            <form id="transaction-form">
+                <div class="form-grid">
+                    <!-- Row 1 -->
+                    <div class="input-group">
+                        <label for="Date">Date</label>
+                        <input type="text" id="Date" name="Date" required placeholder="Select Date">
+                    </div>
+                    <div class="input-group">
+                        <label for="Direction">Direction</label>
+                        <select id="Direction" name="Direction" required>
+                            <option value="Money Out">Money Out</option>
+                            <option value="Money In">Money In</option>
+                        </select>
+                    </div>
+
+                    <!-- Row 2 -->
+                    <div class="input-group">
+                        <label for="AmountOrig">Amount (Orig)</label>
+                        <input type="number" id="AmountOrig" name="AmountOrig" step="0.01" placeholder="0.00" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="Curr">Currency</label>
+                        <select id="Curr" name="Curr" required>
+                            <option value="THB">THB</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="GBP">GBP</option>
+                            <option value="JPY">JPY</option>
+                            <option value="SGD">SGD</option>
+                        </select>
+                    </div>
+
+                    <!-- Row 3 -->
+                    <div class="input-group">
+                        <label for="AmountTHB">Amount (THB)</label>
+                        <input type="number" id="AmountTHB" name="AmountTHB" step="0.01" placeholder="0.00" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="Category">Category</label>
+                        <select id="Category" name="Category" required>
+                            <option value="Revenue – subscriptions">Revenue – subscriptions</option>
+                            <option value="Grant funding">Grant funding</option>
+                            <option value="Founder capital injection">Founder capital injection</option>
+                            <option value="Other income">Other income</option>
+                            <option value="Software & SaaS">Software & SaaS</option>
+                            <option value="Web Infrastructure & hosting">Web Infrastructure & hosting</option>
+                            <option value="AI / API costs">AI / API costs</option>
+                            <option value="Legal & registration">Legal & registration</option>
+                            <option value="Accounting & compliance">Accounting & compliance</option>
+                            <option value="Marketing & ads">Marketing & ads</option>
+                            <option value="Contractors & freelancers">Contractors & freelancers</option>
+                            <option value="Salaries & wages">Salaries & wages</option>
+                            <option value="Equipment & hardware">Equipment & hardware</option>
+                            <option value="Office & admin">Office & admin</option>
+                            <option value="Bank & payment fees">Bank & payment fees</option>
+                            <option value="Travel & meals">Travel & meals</option>
+                            <option value="Other expense">Other expense</option>
+                        </select>
+                    </div>
+
+                    <!-- Row 4 -->
+                    <div class="input-group full-width" style="position: relative;">
+                        <label for="Vendor">Vendor</label>
+                        <input type="text" id="Vendor" name="Vendor" placeholder="e.g. Google, Grab, Amazon" required autocomplete="off">
+                        <div id="vendor-suggestions" class="suggestions-box hidden"></div>
+                    </div>
+
+                    <!-- Row 5 -->
+                    <div class="input-group full-width">
+                        <label for="Description">Description</label>
+                        <input type="text" id="Description" name="Description" placeholder="Brief description of the transaction" required>
+                    </div>
+
+                    <!-- Row 6 -->
+                    <div class="input-group">
+                        <label for="Account">Account</label>
+                        <select id="Account" name="Account" required>
+                            <option value="Account กระแสรายวัน">Account กระแสรายวัน</option>
+                            <option value="Personal card (temp)">Personal card (temp)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="PaidBy">Paid By</label>
+                        <select id="PaidBy" name="PaidBy" required>
+                            <option value="Company">Company</option>
+                            <option value="Fu (CEO)">Fu (CEO)</option>
+                            <option value="Arty (COO)">Arty (COO)</option>
+                            <option value="Meme (CMO)">Meme (CMO)</option>
+                        </select>
+                    </div>
+
+                    <!-- Row 7 -->
+                    <div class="input-group">
+                        <label for="Reimburse">Reimburse?</label>
+                        <select id="Reimburse" name="Reimburse" required>
+                            <option value="No">No</option>
+                            <option value="Yes">Yes</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="Status">Status</label>
+                        <select id="Status" name="Status" required>
+                            <option value="Logged">Logged</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Paid">Paid</option>
+                        </select>
+                    </div>
+
+                    <!-- Row 8 -->
+                    <div class="input-group">
+                        <label for="ReceiptRef">Receipt Ref</label>
+                        <input type="text" id="ReceiptRef" name="ReceiptRef" placeholder="Link or ID to receipt" value="None">
+                    </div>
+                    <div class="input-group">
+                        <label for="ReceiptFile">Upload Receipt</label>
+                        <input type="file" id="ReceiptFile" name="ReceiptFile" accept="image/*,.pdf" style="padding: 0.5rem 1rem; cursor: pointer;">
+                    </div>
+                </div>
+
+                <div class="submit-container">
+                    <button type="submit" id="submit-btn" class="primary-btn">
+                        <span id="btn-text">Add Transaction</span>
+                        <div id="loading-spinner" class="spinner hidden"></div>
+                    </button>
+                </div>
+                
+                <div id="add-notification" class="notification hidden"></div>
+            </form>
         </div>
-      </div>
 
-      <div class="field-group">
-        <label data-i18n="fieldCustomer">Customer <span class="required">*</span></label>
-        <select id="fieldCustomer"></select>
-      </div>
+        <!-- History Tab -->
+        <div id="history-tab" class="tab-content">
+            <div class="history-controls">
+                <div class="search-bar">
+                    <input type="text" id="search-input" placeholder="Search vendor, description, amount...">
+                </div>
+                <div class="filters">
+                    <select id="filter-year">
+                        <option value="">All Years</option>
+                    </select>
+                    <select id="filter-month">
+                        <option value="">All Months</option>
+                    </select>
+                    <select id="filter-category">
+                        <option value="">All Categories</option>
+                    </select>
+                    <button id="refresh-btn" class="secondary-btn">
+                        <span>Refresh</span>
+                        <div id="refresh-spinner" class="spinner hidden"></div>
+                    </button>
+                </div>
+            </div>
 
-      <hr class="divider">
-      <div class="form-section-label" data-i18n="sectionRoute">Route</div>
+            <div id="history-notification" class="notification hidden"></div>
 
-      <div class="field-group">
-        <label data-i18n="fieldOrigin">From / Origin <span class="required">*</span></label>
-        <input type="text" id="fieldOrigin" data-i18n-attr="placeholder:phOrigin" placeholder="e.g. Bangkok Office">
-      </div>
-
-      <div class="field-group">
-        <label data-i18n="fieldDestination">To / Destination <span class="required">*</span></label>
-        <input type="text" id="fieldDestination" data-i18n-attr="placeholder:phDestination" placeholder="e.g. 123 Sukhumvit Rd">
-        <button type="button" class="map-button" id="mapButton">
-          🗺️ <span data-i18n="btnViewMap">View on Google Maps</span>
-        </button>
-      </div>
-
-      <div class="field-group">
-        <label data-i18n="fieldDistance">Distance (km) <span class="required">*</span></label>
-        <input type="text" inputmode="decimal" id="fieldDistance" placeholder="0.0">
-      </div>
-
-      <hr class="divider">
-      <div class="form-section-label" data-i18n="sectionCosts">Costs (THB)</div>
-
-      <div class="field-group">
-        <label data-i18n="fieldToll">Toll Fee <span class="required">*</span></label>
-        <div class="cost-row">
-          <span class="currency-symbol">฿</span>
-          <input type="text" inputmode="decimal" id="fieldToll" placeholder="0.00" class="cost-input">
+            <div class="table-container">
+                <table id="transactions-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Vendor</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Direction</th>
+                            <th>Amount (THB)</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <tr>
+                            <td colspan="8" class="text-center">Loading transactions...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-      </div>
 
-      <div class="field-row">
-        <div class="field-group">
-          <label data-i18n="fieldFuel">Fuel</label>
-          <div class="cost-row">
-            <span class="currency-symbol">฿</span>
-            <input type="text" inputmode="decimal" id="fieldFuel" placeholder="0.00" class="cost-input">
-          </div>
-        </div>
-        <div class="field-group">
-          <label data-i18n="fieldParking">Parking</label>
-          <div class="cost-row">
-            <span class="currency-symbol">฿</span>
-            <input type="text" inputmode="decimal" id="fieldParking" placeholder="0.00" class="cost-input">
-          </div>
-        </div>
-      </div>
-
-      <div class="field-row">
-        <div class="field-group">
-          <label data-i18n="fieldOther">Other</label>
-          <div class="cost-row">
-            <span class="currency-symbol">฿</span>
-            <input type="text" inputmode="decimal" id="fieldOther" placeholder="0.00" class="cost-input">
-          </div>
-        </div>
-        <div class="field-group">
-          <label data-i18n="fieldOtherDesc">Other description</label>
-          <input type="text" id="fieldOtherDesc" data-i18n-attr="placeholder:phOtherDesc" placeholder="What was it for?">
-        </div>
-      </div>
-
-      <div class="total-display">
-        <span class="label" data-i18n="labelTotal">Total Cost</span>
-        <span class="amount"><span class="currency-symbol">฿</span><span id="totalDisplay">0.00</span></span>
-      </div>
-
-      <hr class="divider">
-      <div class="form-section-label" data-i18n="sectionContext">Context</div>
-
-      <div class="field-group">
-        <label data-i18n="fieldPurpose">Purpose <span class="required">*</span></label>
-        <select id="fieldPurpose"></select>
-      </div>
-
-      <div class="field-group">
-        <label data-i18n="fieldNotes">Notes</label>
-        <textarea id="fieldNotes" data-i18n-attr="placeholder:phNotes" placeholder="Optional details..."></textarea>
-      </div>
-
-      <button type="submit" class="btn-primary" data-i18n="btnSave">Save Visit</button>
-    </form>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════════════════════════
-       HISTORY VIEW
-       ═══════════════════════════════════════════════════════════════════ -->
-  <section class="view" id="historyView">
-
-    <div class="card">
-      <div class="section-title">
-        <h2 data-i18n="sectionFilters">Filters</h2>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
-          <button id="openSheetBtn" style="display:none;" data-i18n="btnOpenSheet">📊 Open Google Sheet</button>
-          <button id="syncSheetBtn" style="display:none;" data-i18n="btnSyncSheet">🔄 Sync Offline Data</button>
-          <button id="exportBtn" data-i18n="btnExport">⬇ Export CSV</button>
-        </div>
-      </div>
-      <div class="filters">
-        <div>
-          <label data-i18n="filterFrom">From</label>
-          <div class="date-picker-wrapper">
-            <input type="text" id="filterFrom" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
-            <span class="date-icon">📅</span>
-          </div>
-        </div>
-        <div>
-          <label data-i18n="filterTo">To</label>
-          <div class="date-picker-wrapper">
-            <input type="text" id="filterTo" placeholder="dd/mm/yyyy" maxlength="10" autocomplete="off">
-            <span class="date-icon">📅</span>
-          </div>
-        </div>
-        <div>
-          <label data-i18n="filterRep">Sales Rep</label>
-          <select id="filterRep"></select>
-        </div>
-        <div>
-          <label data-i18n="filterCustomer">Customer</label>
-          <select id="filterCustomer"></select>
-        </div>
-      </div>
-      <div class="filter-actions">
-        <button class="btn-secondary" id="applyFilters" data-i18n="btnApplyFilters">Apply</button>
-        <button class="btn-secondary" id="clearFilters" data-i18n="btnClearFilters">Clear</button>
-      </div>
     </div>
 
-    <div class="visit-list" id="visitList"></div>
-  </section>
-
-  </div> <!-- end appContainer -->
-
-</main>
-
-<!-- ═══ DELETE CONFIRMATION MODAL ═══ -->
-<div class="modal-backdrop" id="deleteModal">
-  <div class="modal">
-    <h3 data-i18n="modalDeleteTitle">Confirm Delete</h3>
-    <p data-i18n="modalDeleteText">Enter the password to delete this visit. This cannot be undone.</p>
-    <div class="field-group">
-      <input type="password" id="deletePassword" data-i18n-attr="placeholder:phPassword" placeholder="Password">
-    </div>
-    <div class="button-row">
-      <button class="btn-secondary" id="cancelDelete" data-i18n="btnCancel">Cancel</button>
-      <button class="btn-danger" id="confirmDelete" data-i18n="btnDelete">Delete</button>
-    </div>
-  </div>
-</div>
-
-<script src="script.js"></script>
-
+    <script src="script.js"></script>
 </body>
 </html>
