@@ -2,6 +2,56 @@ const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwznFGWDZuz9IVCw
 
 let allTransactions = []; // Store fetched data
 
+// Timezone-safe helper to format any date input into DD/MM/YYYY
+function formatDateToDDMMYYYY(dateVal) {
+    if (!dateVal) return "";
+    
+    if (dateVal instanceof Date) {
+        const day = String(dateVal.getDate()).padStart(2, '0');
+        const month = String(dateVal.getMonth() + 1).padStart(2, '0');
+        const year = String(dateVal.getFullYear());
+        return `${day}/${month}/${year}`;
+    }
+    
+    if (typeof dateVal === 'string') {
+        // DD/MM/YYYY already
+        if (dateVal.includes('/') && dateVal.split('/').length === 3) {
+            const parts = dateVal.split('/');
+            return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2]}`;
+        }
+        // ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss...)
+        if (dateVal.includes('-')) {
+            const datePart = dateVal.includes('T') ? dateVal.split('T')[0] : dateVal;
+            const parts = datePart.split('-');
+            if (parts.length === 3) {
+                return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+            }
+        }
+    }
+    
+    // Fallback standard parse using UTC methods to avoid timezone shift for string values
+    const d = new Date(dateVal);
+    if (!isNaN(d.getTime())) {
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const year = String(d.getUTCFullYear());
+        return `${day}/${month}/${year}`;
+    }
+    return "";
+}
+
+// Timezone-safe helper to get parts (day, month, year) from a date
+function getDateParts(dateVal) {
+    const formatted = formatDateToDDMMYYYY(dateVal);
+    if (!formatted) return { day: "", month: "", year: "" };
+    const parts = formatted.split('/');
+    return {
+        day: parts[0],
+        month: parts[1],
+        year: parts[2]
+    };
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- Tabs Logic ---
     const tabBtns = document.querySelectorAll('.tab-btn');
@@ -188,14 +238,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
 
-            const dateObj = new Date(data.Date);
-            const day = String(dateObj.getDate()).padStart(2, '0');
-            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const year = dateObj.getFullYear();
-
-            data.Date = `${day}/${month}/${year}`;
-            data.Month = `${year}-${dateObj.getMonth() + 1}`;
-            data.Year = year.toString();
+            const parts = getDateParts(data.Date);
+            data.Date = `${parts.day}/${parts.month}/${parts.year}`;
+            data.Month = `${parts.year}-${parseInt(parts.month, 10)}`;
+            data.Year = parts.year;
             data.action = 'add'; // Specify action
 
             // Process receipt file upload if present
@@ -222,19 +268,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const formAmt = parseFloat(String(data.AmountOrig).replace(/,/g, ''));
                 const isDuplicate = allTransactions.some(t => {
                     const histAmt = parseFloat(String(t.AmountOrig).replace(/,/g, ''));
-                    let dateMatches = (t.Date === data.Date);
-
-                    if (!dateMatches && t.Date) {
-                        try {
-                            const histDateObj = new Date(t.Date);
-                            if (!isNaN(histDateObj.getTime())) {
-                                const histDay = String(histDateObj.getDate()).padStart(2, '0');
-                                const histMonth = String(histDateObj.getMonth() + 1).padStart(2, '0');
-                                const histYear = histDateObj.getFullYear();
-                                dateMatches = (`${histDay}/${histMonth}/${histYear}` === data.Date);
-                            }
-                        } catch (e) { }
-                    }
+                    const histDateFormatted = formatDateToDDMMYYYY(t.Date);
+                    const dateMatches = (histDateFormatted === data.Date);
 
                     const vendorMatches = t.Vendor && data.Vendor && t.Vendor.toLowerCase().trim() === data.Vendor.toLowerCase().trim();
                     const amountMatches = histAmt === formAmt;
@@ -372,12 +407,10 @@ document.addEventListener('DOMContentLoaded', () => {
         allTransactions.forEach(t => {
             if (t.Category) categories.add(t.Category);
             if (t.Date) {
-                let dateObj = new Date(t.Date);
-                if (isNaN(dateObj) && typeof t.Date === 'string' && t.Date.includes('/')) {
-                    const parts = t.Date.split('/');
-                    if (parts.length === 3) dateObj = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00`);
+                const parts = getDateParts(t.Date);
+                if (parts.year) {
+                    years.add(parseInt(parts.year, 10));
                 }
-                if (!isNaN(dateObj)) years.add(dateObj.getFullYear());
             }
         });
 
@@ -431,14 +464,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let itemMonth = "";
             let itemYear = "";
             if (t.Date) {
-                let dateObj = new Date(t.Date);
-                if (isNaN(dateObj) && typeof t.Date === 'string' && t.Date.includes('/')) {
-                    const parts = t.Date.split('/');
-                    if (parts.length === 3) dateObj = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00`);
-                }
-                if (!isNaN(dateObj)) {
-                    itemMonth = String(dateObj.getMonth() + 1);
-                    itemYear = String(dateObj.getFullYear());
+                const parts = getDateParts(t.Date);
+                if (parts.month && parts.year) {
+                    itemMonth = String(parseInt(parts.month, 10));
+                    itemYear = parts.year;
                 }
             }
 
@@ -461,27 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = document.createElement('tr');
 
             // Format Date safely
-            let dateStr = t.Date;
-            if (t.Date instanceof Date) {
-                const day = String(t.Date.getDate()).padStart(2, '0');
-                const month = String(t.Date.getMonth() + 1).padStart(2, '0');
-                dateStr = `${day}/${month}/${t.Date.getFullYear()}`;
-            } else if (typeof t.Date === 'string') {
-                if (t.Date.includes('T')) {
-                    const d = new Date(t.Date);
-                    const day = String(d.getDate()).padStart(2, '0');
-                    const month = String(d.getMonth() + 1).padStart(2, '0');
-                    dateStr = `${day}/${month}/${d.getFullYear()}`;
-                } else if (t.Date.includes('-') && !t.Date.includes('/')) {
-                    const d = new Date(t.Date);
-                    if (!isNaN(d)) {
-                        const day = String(d.getDate()).padStart(2, '0');
-                        const month = String(d.getMonth() + 1).padStart(2, '0');
-                        dateStr = `${day}/${month}/${d.getFullYear()}`;
-                    }
-                }
-                // if it's already DD/MM/YYYY it stays as t.Date
-            }
+            const dateStr = formatDateToDDMMYYYY(t.Date) || t.Date;
 
             let statusClass = (t.Status || '').toLowerCase();
             let directionClass = (t.Direction || '').toLowerCase().replace(/\s+/g, '-');
